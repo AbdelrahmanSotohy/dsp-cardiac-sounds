@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hearing Murmurs with DSP · CEN464 Group 8</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="icon-btn" id="menuBtn" aria-label="Open step list">☰ Steps</button>
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 26 26"><path d="M1 14h5l2-6 3 12 3-16 3 13 2-3h6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="brand-text"><b>DSP Analysis of Heart Sounds</b><span>CEN464 · Group 8 · Fall 2026</span></div>
+  </div>
+  <div class="top-spacer"></div>
+  <div class="top-progress">
+    <span id="stepCount">Step 1 of 18</span>
+    <div class="bar"><i id="progressBar"></i></div>
+  </div>
+  <button class="icon-btn own-btn" id="ownBtn" title="Run the detectors on your own recording">Test your own</button>
+  <button class="icon-btn" id="glossBtn" title="Glossary">Glossary</button>
+</header>
+
+<nav class="sidebar" id="sidebar" aria-label="Steps"></nav>
+
+<main class="main" id="main">
+
+<!-- ======================= 1. WELCOME ======================= -->
+<section class="step" data-id="welcome" data-group="Start" data-title="Welcome">
+  <div class="hero">
+    <svg class="wave" viewBox="0 0 600 260" preserveAspectRatio="none" aria-hidden="true">
+      <path id="heroWave" fill="none" stroke="#EE2737" stroke-width="2.4" stroke-linejoin="round" opacity=".9"/>
+      <path id="heroWave2" fill="none" stroke="#fff" stroke-width="1.2" opacity=".25"/>
+    </svg>
+    <span class="kicker">CEN464 Digital Signal Processing · Course project</span>
+    <h1>Can a computer <em>hear</em> a heart murmur, using only DSP?</h1>
+    <p>This site walks you through our project from the first look at the data to the final evaluated detector. Every step shows what we did, why we did it, and the numbers that backed each decision.</p>
+    <div class="team">
+      <div><b>Abdelrahman Mohamed Sotohy</b>ID 1091268</div>
+      <div><b>Abdelrahman Mohamed Mahmoud</b>ID 1093681</div>
+      <div><b>Data</b>CirCor DigiScope v1.0.3 · 313 recordings</div>
+    </div>
+    <div class="flex mt24" style="position:relative">
+      <button class="btn btn-red" data-goto="next">Start the walkthrough →</button>
+      <button class="btn btn-white" data-goto="p5-eval">Jump to the results</button>
+      <button class="btn btn-white" data-own="open">Test your own recording</button>
+    </div>
+  </div>
+
+  <h3>The answer in four numbers <small>murmur detector on the 100 unseen test recordings</small></h3>
+  <div class="grid g4">
+    <div class="stat accent"><div class="v">0.88</div><div class="k">Balanced accuracy on the test set (0.88 on development, 0.89 cross-validated)</div></div>
+    <div class="stat red"><div class="v">0.90</div><div class="k">Sensitivity: 45 of 50 murmur recordings caught</div></div>
+    <div class="stat"><div class="v">0.86</div><div class="k">Specificity: 43 of 50 normal recordings correctly passed</div></div>
+    <div class="stat"><div class="v">0.75</div><div class="k">F1 of our S1/S2 detector on the test set</div></div>
+  </div>
+
+  <h3>How to use this site</h3>
+  <div class="howto">
+    <div><b>Go step by step</b>Use the <b style="display:inline">Next</b> button at the bottom, or the <kbd>→</kbd> and <kbd>←</kbd> keys.</div>
+    <div><b>Jump anywhere</b>The list on the left groups the 19 steps by project phase. <b style="display:inline">Test your own</b> at the top runs our detector on any recording. Click any of them.</div>
+    <div><b>Play with it</b>Sliders, buttons and charts react. The labs run on real recordings and our real cycle features.</div>
+    <div><b>Unknown word?</b>Dotted words like <span class="term" data-term="PCG">PCG</span> explain themselves on click. There is also a Glossary at the top.</div>
+  </div>
+</section>
+
+<!-- ======================= 2. THE BRIEF ======================= -->
+<section class="step" data-id="brief" data-group="Start" data-title="The challenge">
+  <div class="eyebrow">Start <span class="sep">/</span> The challenge</div>
+  <h2>What we were asked to do</h2>
+  <p class="lead">Design and evaluate a complete <span class="term" data-term="DSP">DSP</span> pipeline that analyses real heart-sound recordings (<span class="term" data-term="PCG">phonocardiograms</span>) and detects or characterises <span class="term" data-term="Murmur">heart murmurs</span>. No machine-learning classifier was required. The focus was on DSP design, experiments and interpretation.</p>
+
+  <div class="decision"><div class="tick">!</div><div><b class="lbl">The rule that shaped everything</b><p>Every technical choice had to be backed by a <b>measured number</b>. "This filter is better" was not allowed unless a measurement showed it. So each step on this site ends with the evidence and the decision it led to.</p></div></div>
+
+  <h3>Six phases <small>click one to jump to it</small></h3>
+  <div class="grid g3">
+    <button class="phase-card" data-goto="p1-signal"><div class="pn">PHASE 1</div><h5>Background & design</h5><p>Understand PCG signals, murmurs and noise. Study the annotations. Propose the pipeline.</p><div class="go">Open →</div></button>
+    <button class="phase-card" data-goto="p2-psd"><div class="pn">PHASE 2</div><h5>Preprocessing & cycles</h5><p>Inspect noise, compare FIR and IIR filters, sweep cutoffs and order, detect S1/S2.</p><div class="go">Open →</div></button>
+    <button class="phase-card" data-goto="p3-features"><div class="pn">PHASE 3</div><h5>Time, frequency, STFT</h5><p>Pick the features that separate normal from murmur, and tune the spectrogram.</p><div class="go">Open →</div></button>
+    <button class="phase-card" data-goto="p4-score"><div class="pn">PHASE 4</div><h5>Murmur detection</h5><p>Build the detector, study its parameters, test it once on unseen data, by region and location.</p><div class="go">Open →</div></button>
+    <button class="phase-card" data-goto="p5-eval"><div class="pn">PHASE 5</div><h5>Evaluation</h5><p>All performance measures on development and test. Observed vs measured vs concluded.</p><div class="go">Open →</div></button>
+    <button class="phase-card" data-goto="p6-gui"><div class="pn">PHASE 6</div><h5>GUI & final report</h5><p>demoGUI: a MATLAB interface that shows every stage of the pipeline for any recording.</p><div class="go">Open →</div></button>
+  </div>
+
+  <h3>Timeline</h3>
+  <div class="timeline">
+    <div class="ph"><b>Phases 1–3</b>Analysis, filters, features, STFT</div>
+    <div class="ph m"><b>30 Oct 2026</b>Milestone 1: 8-page IEEE report + code</div>
+    <div class="ph"><b>Phases 4–6</b>Detector, evaluation, GUI</div>
+    <div class="ph m"><b>20 Nov 2026</b>Final report, artifacts, videos, reflections</div>
+  </div>
+</section>
+
+<!-- ======================= 3. DATASET ======================= -->
+<section class="step" data-id="dataset" data-group="Data" data-title="Dataset & our subsets">
+  <div class="eyebrow">Data <span class="sep">/</span> CirCor DigiScope <span class="owners"><span class="owner s">Sotohy</span></span></div>
+  <h2>Choosing the recordings we worked on</h2>
+  <p class="lead">CirCor has 942 children and 3,163 recordings. We did not use all of them. We built three sets with fixed random seeds so every result can be reproduced, and kept one set completely hidden until the very end.</p>
+
+  <div class="grid g4">
+    <div class="stat"><div class="v">4<small>kHz</small></div><div class="k">Sampling rate, 16-bit .wav</div></div>
+    <div class="stat"><div class="v">5</div><div class="k">Annotation labels per sample: 0 none, 1 S1, 2 systole, 3 S2, 4 diastole</div></div>
+    <div class="stat"><div class="v">49%</div><div class="k">Median share of a recording that is annotated</div></div>
+    <div class="stat accent"><div class="v">313</div><div class="k">Recordings we used, from 160 patients</div></div>
+  </div>
+
+  <h3>Our three sets <small>click a card</small></h3>
+  <div class="grid g3" id="setCards">
+    <button class="setcard on" data-set="dev"><div class="big">60</div><div class="nm">Development set</div><div class="ds">Phases 1–3 and every Phase 4 parameter</div></button>
+    <button class="setcard" data-set="test"><div class="big">100</div><div class="nm">Test set</div><div class="ds">Used once, after all parameters were fixed</div></button>
+    <button class="setcard" data-set="loc"><div class="big">153</div><div class="nm">Other locations</div><div class="ds">Same patients, other auscultation points</div></button>
+  </div>
+  <div class="card mt16" id="setDetail"></div>
+
+  <h3>Rules we applied to the data</h3>
+  <div class="grid g2">
+    <div class="card"><b>Only complete cycles.</b> We analysed only annotated cycles in the full order S1 → systole → S2 → diastole. Since only about half of each recording is annotated, this keeps every measurement tied to a trusted reference.</div>
+    <div class="card"><b>Murmur only where it is audible.</b> A murmur patient's recording counts as "murmur" only at locations where the murmur is listed as audible. Patients with unknown murmur status were excluded.</div>
+    <div class="card"><b>We checked the labels.</b> <code>p1_annotation_check</code> tested sampling rate, label values and label order in every file. It found one labelling error (<code>84877_MV</code>).</div>
+    <div class="card"><b>Systolic murmurs.</b> CirCor murmurs are mostly systolic: 55% holosystolic, 33% early-systolic, and over half are grade I/VI (very faint). So systole became our main region of analysis.</div>
+  </div>
+</section>
+
+<!-- ======================= 4. P1 SIGNAL ======================= -->
+<section class="step" data-id="p1-signal" data-group="Phase 1 · Background & design" data-title="Meet the signal">
+  <div class="eyebrow">Phase 1 <span class="sep">/</span> Background <span class="owners"><span class="owner f">Mahmoud: background study</span><span class="owner s">Sotohy: annotation analysis</span></span></div>
+  <h2>What a heartbeat looks like as a signal</h2>
+  <p class="lead">Each heartbeat makes two short sounds, <span class="term" data-term="S1">S1</span> and <span class="term" data-term="S2">S2</span>. Between them are two quieter gaps: <span class="term" data-term="Systole">systole</span> and <span class="term" data-term="Diastole">diastole</span>. A murmur is extra sound, usually inside systole. Explore real recordings from our development set below and listen to them.</p>
+
+  <div class="card">
+    <div class="controls">
+      <label class="ctrl">Recording<div class="row"><select id="exRec"></select></div></label>
+      <label class="ctrl">Show<div class="row"><span class="seg" id="exSig"><button data-v="raw" class="on">Raw</button><button data-v="filt">Filtered (our FIR)</button></span></div></label>
+      <label class="ctrl">Window start<div class="row"><input type="range" id="exStart" min="0" max="17" step="0.1" value="0"><span class="val" id="exStartV">0.0 s</span></div></label>
+      <label class="ctrl">Listen<div class="row"><button class="btn btn-ghost" id="exPlay" style="padding:7px 14px">▶ Play 3 s</button></div></label>
+    </div>
+    <canvas class="wave-canvas" id="exCanvas"></canvas>
+    <div class="legend"><span><i style="background:var(--a-s1)"></i>S1</span><span><i style="background:var(--a-sys)"></i>Systole</span><span><i style="background:var(--a-s2)"></i>S2</span><span><i style="background:var(--a-dia)"></i>Diastole</span><span class="muted">Unshaded = not annotated</span></div>
+    <div class="plain" id="exInfo"></div>
+  </div>
+
+  <h3>Measured segment durations <small>Table I, mean ± SD, development set</small></h3>
+  <div class="card">
+    <div id="durChart"></div>
+    <div class="legend"><span><i style="background:var(--c-normal)"></i>Normal</span><span><i style="background:var(--c-murmur)"></i>Murmur</span></div>
+    <p class="note">Heart rate: 102 bpm (normal) vs 111 bpm (murmur). These are children, so hearts beat fast and every segment is short, often only 100–150 ms.</p>
+  </div>
+
+  <div class="grid g2 mt16">
+    <div class="card"><b>Noise we had to deal with</b><ul class="clean"><li>Stethoscope friction and movement</li><li>Crying and talking (these are children)</li><li>Baseline wander (very low frequencies)</li><li>Breath sounds</li></ul></div>
+    <div class="card"><b>Our working hypothesis</b><p class="mt8 mt0">Murmur segments have <b>more energy</b>, a <b>wider spectrum</b> and <b>higher entropy</b> than normal ones. Phase 3 tests this with numbers. (Spoiler: energy yes, entropy only partly.)</p></div>
+  </div>
+
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/fig_annotations.png" alt="Normal and murmur PCG with annotations"><figcaption><span>Raw normal (50668_MV) and murmur (49821_MV) recordings with shaded annotations.</span><code>p1_plot_annotations</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 5. P1 PIPELINE ======================= -->
+<section class="step" data-id="p1-pipeline" data-group="Phase 1 · Background & design" data-title="Our pipeline">
+  <div class="eyebrow">Phase 1 <span class="sep">/</span> Design <span class="owners"><span class="owner s">Sotohy: pipeline design</span></span></div>
+  <h2>The pipeline we proposed (and finally used)</h2>
+  <p class="lead">Seven blocks turn a raw recording into a "murmur / no murmur" answer. In Phase 1 every block came with an open question. The rest of the project answered those questions with experiments. Click a block to see its final settings and where they came from.</p>
+  <div class="pipe" id="pipe"></div>
+  <div class="card pipe-detail" id="pipeDetail"></div>
+  <div class="why"><p><b>Why we picked this:</b> We cut heartbeats with the expert annotations because they are more accurate than our own S1/S2 detector (F1 0.72), so every feature is measured on the right phase.</p></div>
+</section>
+
+<!-- ======================= 6. P2 PSD ======================= -->
+<section class="step" data-id="p2-psd" data-group="Phase 2 · Preprocessing" data-title="Where the energy lives">
+  <div class="eyebrow">Phase 2 <span class="sep">/</span> Noise inspection <span class="owners"><span class="owner f">Mahmoud</span></span></div>
+  <h2>Where is the heart-sound energy in frequency?</h2>
+  <p class="lead">Before designing a filter you need to know what to keep. We computed the <span class="term" data-term="PSD">Welch power spectrum</span> separately for S1+S2, systole and diastole. Try it on a single recording below.</p>
+
+  <div class="card">
+    <div class="controls">
+      <label class="ctrl">Recording<div class="row"><select id="psdRec"></select></div></label>
+      <label class="ctrl">Signal<div class="row"><span class="seg" id="psdSig"><button data-v="raw" class="on">Raw</button><button data-v="filt">After our FIR</button></span></div></label>
+    </div>
+    <div id="psdChart"></div>
+    <div class="legend"><span><i class="line" style="background:var(--c-normal)"></i>S1 + S2</span><span><i class="line" style="background:var(--c-murmur)"></i>Systole</span><span><i class="line" style="background:var(--c-third)"></i>Diastole</span><span><i style="background:#FDECEE"></i>Our passband 25–500 Hz</span></div>
+    <p class="note">Welch PSD, Hann window, 256 samples, 50% overlap, computed in your browser over the complete annotated cycles of this recording.</p>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We started from a 25–600 Hz passband because heart sounds sit at 20–150 Hz, murmurs reach about 600 Hz and drift stays below 16 Hz. The 60 Hz mains peak was only 2.7 dB, so no notch filter was needed.</p></div>
+
+  <div class="grid g3 mt16">
+    <div class="stat"><div class="v">&lt; 500<small>Hz</small></div><div class="k">Almost all heart-sound energy sits below 500 Hz</div></div>
+    <div class="stat"><div class="v">1.5%</div><div class="k">Energy below 20 Hz in the raw signals (baseline wander and movement)</div></div>
+    <div class="stat red"><div class="v">25–500<small>Hz</small></div><div class="k">The passband we chose to test first</div></div>
+  </div>
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/psd.png" alt="PSD of segments"><figcaption><span>Welch PSD of S1+S2, systole and diastole, development set.</span><code>p2_spectrum</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 7. P2 FILTERS ======================= -->
+<section class="step" data-id="p2-filters" data-group="Phase 2 · Preprocessing" data-title="FIR vs IIR">
+  <div class="eyebrow">Phase 2 <span class="sep">/</span> Filter design <span class="owners"><span class="owner s">Sotohy</span></span></div>
+  <h2>FIR or IIR? Both cleaned the signal. Only one kept the timing.</h2>
+  <p class="lead">We designed a <span class="term" data-term="FIR">FIR</span> bandpass (Hamming window, order 400) and an <span class="term" data-term="IIR">IIR</span> Butterworth bandpass (8th order), both 25–500 Hz, and measured them on the same recordings.</p>
+
+  <div class="card">
+    <div class="controls"><span class="seg" id="fMetric"><button data-v="0" class="on">Noise below 20 Hz</button><button data-v="1">Murmur gap</button><button data-v="2">Leakage above 500 Hz</button><button data-v="3">Delay</button></span></div>
+    <div id="filtChart"></div>
+    <p class="muted" id="filtNote"></p>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We picked FIR over IIR because both removed the same noise, but the FIR delay is constant (50 ms, removed exactly by shifting 200 samples). The IIR delays 25 Hz by 26 ms but 200 Hz by only 1 ms, which distorts the timing of S1 and S2.</p></div>
+
+  <table class="data mt16">
+    <thead><tr><th>Measure</th><th class="n">Raw</th><th class="n">FIR, order 400</th><th class="n">IIR, order 8</th></tr></thead>
+    <tbody>
+      <tr><td>Energy below 20 Hz</td><td class="n">1.5%</td><td class="n">0.1%</td><td class="n">0.1%</td></tr>
+      <tr><td>S1+S2 / diastole ratio</td><td class="n">baseline</td><td class="n">+1 dB</td><td class="n">+1 dB</td></tr>
+      <tr><td>Murmur–normal systolic gap</td><td class="n">4.6 dB</td><td class="n">5.7 dB</td><td class="n">5.7 dB</td></tr>
+      <tr><td>Energy above 500 Hz</td><td class="n">–</td><td class="n">≈ 0 (&gt; 50 dB stopband)</td><td class="n">3.3%</td></tr>
+      <tr class="hl"><td>Group delay</td><td class="n">–</td><td class="n">constant (200 samples, removed)</td><td class="n">26 ms at 25 Hz, 1 ms at 200 Hz</td></tr>
+    </tbody>
+  </table>
+
+  <div class="decision"><div class="tick">✓</div><div><b class="lbl">Decision</b><p><b>FIR, Hamming, order 400, 25–500 Hz.</b> Same noise reduction as IIR, a cleaner stopband, and a <b>constant group delay</b> that we cancel exactly by shifting 200 samples. The IIR shifts low and high frequencies by different amounts, which would move S1/S2 timing.</p></div></div>
+
+  <h3>Filter lab <small>design your own FIR and hear the difference</small></h3>
+  <div class="card">
+    <div class="controls">
+      <label class="ctrl">Recording<div class="row"><select id="flRec"></select></div></label>
+      <label class="ctrl">Lower cutoff<div class="row"><input type="range" id="flLo" min="5" max="60" step="5" value="25"><span class="val" id="flLoV">25 Hz</span></div></label>
+      <label class="ctrl">Upper cutoff<div class="row"><input type="range" id="flHi" min="200" max="900" step="50" value="500"><span class="val" id="flHiV">500 Hz</span></div></label>
+      <label class="ctrl">Order<div class="row"><input type="range" id="flN" min="50" max="600" step="50" value="400"><span class="val" id="flNV">400</span></div></label>
+      <button class="btn btn-ghost" id="flReset" style="padding:7px 14px">Reset to our choice</button>
+    </div>
+    <div class="grid g2">
+      <div><b class="small">Frequency response</b><div id="flResp"></div></div>
+      <div><b class="small">Waveform, 2 s</b><canvas class="wave-canvas" id="flWave" style="height:200px"></canvas>
+        <div class="flex mt8"><button class="btn btn-ghost" id="flPlayRaw" style="padding:6px 12px">▶ Raw</button><button class="btn btn-red" id="flPlayF" style="padding:6px 12px">▶ Filtered</button><span class="muted small" id="flStat"></span></div>
+      </div>
+    </div>
+  </div>
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/filters.png" alt="FIR vs IIR responses"><figcaption><span>FIR vs IIR magnitude response, group delay and effect on the signal.</span><code>p2_fir_vs_iir</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 8. P2 SWEEP ======================= -->
+<section class="step" data-id="p2-sweep" data-group="Phase 2 · Preprocessing" data-title="Cutoff & order sweep">
+  <div class="eyebrow">Phase 2 <span class="sep">/</span> Parameter sweep <span class="owners"><span class="owner f">Mahmoud</span></span></div>
+  <h2>Why exactly 25 Hz, 500 Hz and order 400?</h2>
+  <p class="lead">We swept 4 lower cutoffs × 4 upper cutoffs and measured two things on the development set: how much the heart sounds stand out from diastole in normal recordings, and how much louder murmur systoles are than normal systoles. Hover the cells. The red box is our choice.</p>
+  <div class="grid g2">
+    <div class="card"><div id="heatGain"></div><p class="small muted">Higher = S1/S2 stand out more. Raising the lower cutoff to 40 Hz loses S1 energy.</p></div>
+    <div class="card"><div id="heatGap"></div><p class="small muted">Higher = murmurs stand out more. 40 Hz wins here, but at the cost on the left.</p></div>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We picked 25–500 Hz because 40 Hz gave a bigger murmur gap but cut S1 (0.97 → 0.68 dB), and a 500 Hz top kept more S1+S2 gain than 600 Hz (0.97 vs 0.78 dB). Order 400 is where the FIR gain stops improving.</p></div>
+  <div class="plain"><b>The trade-off in plain words</b>40 Hz gave the largest murmur gap (6.11 dB) but threw away S1 energy we need for finding the cycles. 25 Hz keeps most of the S1+S2 gain while still giving a 5.71 dB gap, the best gap of any row at 500 Hz upper cutoff.</div>
+
+  <h3>Filter order</h3>
+  <div class="grid g3">
+    <div class="stat"><div class="v">400</div><div class="k">FIR: the S1+S2 gain levels off here (0.97 dB). Higher order adds cost, not benefit.</div></div>
+    <div class="stat"><div class="v">8</div><div class="k">Best IIR order: 1.14 dB gain, 5.70 dB gap</div></div>
+    <div class="stat red"><div class="v">3.3 → 33.1<small>ms</small></div><div class="k">IIR group-delay spread grows from order 2 to order 10, another reason to avoid IIR</div></div>
+  </div>
+  <div class="decision"><div class="tick">✓</div><div><b class="lbl">Decision</b><p>Passband <b>25–500 Hz</b>, FIR order <b>400</b>.</p></div></div>
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/sweep.png" alt="Cutoff sweep"><figcaption><span>Cutoff sweep heatmaps.</span><code>p2_cutoff_order_sweep</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 9. P2 S1/S2 ======================= -->
+<section class="step" data-id="p2-s1s2" data-group="Phase 2 · Preprocessing" data-title="Finding S1 and S2">
+  <div class="eyebrow">Phase 2 <span class="sep">/</span> Cardiac cycles <span class="owners"><span class="owner s">Sotohy</span></span></div>
+  <h2>Can we find S1 and S2 without the annotations?</h2>
+  <p class="lead">Our detector computes an <span class="term" data-term="Envelope">envelope</span>, smooths it, picks peaks at least 150 ms apart, then labels each peak by timing: systole is shorter than diastole, so a peak followed by a <i>short</i> gap is S1. A detection is correct if it lands within ±60 ms of an annotated sound <i>and</i> has the right label.</p>
+
+  <div class="card">
+    <div class="controls">
+      <label class="ctrl">Recording<div class="row"><select id="sdRec"></select></div></label>
+      <label class="ctrl">Envelope<div class="row"><span class="seg" id="sdM"><button data-v="Hilbert" class="on">Hilbert</button><button data-v="Shannon">Shannon</button></span></div></label>
+      <label class="ctrl">Smoothing<div class="row"><span class="seg" id="sdS"><button data-v="20">20 ms</button><button data-v="50" class="on">50 ms</button><button data-v="100">100 ms</button></span></div></label>
+      <label class="ctrl">Threshold<div class="row"><span class="seg" id="sdT"><button data-v="0.1">0.1</button><button data-v="0.2" class="on">0.2</button><button data-v="0.3">0.3</button><button data-v="0.4">0.4</button></span></div></label>
+      <label class="ctrl">Window<div class="row"><input type="range" id="sdStart" min="0" max="17" step="0.1" value="0"><span class="val" id="sdStartV">0.0 s</span></div></label>
+    </div>
+    <canvas class="wave-canvas" id="sdCanvas" style="height:250px"></canvas>
+    <div class="legend"><span><i class="line" style="background:#0C2340"></i>Envelope</span><span><i class="line" style="background:#9AA5B5"></i>Threshold</span><span>▼ <b style="color:#1F5FAD">S1</b> / <b style="color:#16A085">S2</b> detected and correct</span><span><b style="color:#EE2737">✕</b> wrong or extra</span><span class="muted">Shading = reference annotations</span></div>
+    <div class="grid g2 mt16">
+      <div><b class="small">This recording</b><div class="metrics mt8" id="sdRecM"></div></div>
+      <div><b class="small">Same setting on all 60 development recordings</b><div class="metrics mt8" id="sdDevM"></div></div>
+    </div>
+  </div>
+
+  <h3>All 24 settings we tested <small>F1 on the development set · hover for details · click to try</small></h3>
+  <div class="grid g2">
+    <div class="card"><div id="gridH"></div></div>
+    <div class="card"><div id="gridS"></div></div>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We picked Hilbert, 50 ms, threshold 0.2 because it had the best F1 of the 24 settings (72.4%). 20 ms smoothing gave false peaks and 100 ms merged S1 and S2. We used F1 because heart-sound detection has no true negatives.</p></div>
+  <div class="decision"><div class="tick">✓</div><div><b class="lbl">Decision</b><p><b>Hilbert envelope, 50 ms smoothing, threshold 0.2</b>: sensitivity 69.1%, PPV 76.1%, <b>F1 72.4%</b>, timing error 19.6 ± 11.7 ms (detections land about 17 ms early). Filtering helps: sensitivity rises from 66.6% on raw signals to 69.1% with our FIR. On the test set the same detector reached F1 75.2%.</p></div></div>
+  <div class="plain"><b>Why this matters later</b>F1 ≈ 0.72 is good but not perfect, so the murmur detector in Phase 4 uses the annotated cycle boundaries. The S1/S2 detector is our check of how far the segmentation could be automated.</div>
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/detect.png" alt="S1/S2 detection"><figcaption><span>Filtered PCG, Hilbert envelope and detected S1/S2 on top of the annotations.</span><code>p2_s1s2_detection</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 10. P3 FEATURES ======================= -->
+<section class="step" data-id="p3-features" data-group="Phase 3 · Features & STFT" data-title="Which features separate?">
+  <div class="eyebrow">Phase 3 <span class="sep">/</span> Time & frequency features <span class="owners"><span class="owner s">Sotohy</span></span></div>
+  <h2>Comparing systole to its own diastole was the key idea</h2>
+  <p class="lead">Absolute loudness changes with the child, the stethoscope pressure and the location. So we measured each feature in systole <b>minus</b> the same feature in the diastole of the same cycle. We call these the Δ ("delta") features. Diastole alone showed no difference at all (every p &gt; 0.1).</p>
+
+  <div class="card">
+    <div class="controls"><span class="seg" id="featView"><button data-v="d" class="on">Effect size (Cohen's d)</button><button data-v="sel">Selection logic</button></span></div>
+    <div id="featChart"></div>
+    <div id="featSel" style="display:none"></div>
+    <p class="note">Effect size <span class="term" data-term="Cohen's d">d</span>: how many standard deviations apart the normal and murmur groups are. 0.8 or more is usually called large. Bonferroni-corrected significance level: 0.05 / 27 tests = 0.0019.</p>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We kept ΔRMS, ΔZCR and ΔBER because they had the largest effect sizes, and dropped Δenvelope and Δcentroid because they repeat other features (r = 0.98 and 0.91). Systole minus diastole uses each patient's own diastole as the reference, so recording loudness cancels out.</p></div>
+
+  <div class="grid g3 mt16">
+    <div class="stat red"><div class="v">ΔRMS</div><div class="k">Systole louder than diastole. d = 1.33, p &lt; 0.001</div></div>
+    <div class="stat red"><div class="v">ΔZCR</div><div class="k">Systole "busier" (more zero crossings). d = 1.32, p &lt; 0.001</div></div>
+    <div class="stat red"><div class="v">ΔBER</div><div class="k">More energy at 150–500 Hz vs 25–150 Hz. d = 0.73</div></div>
+  </div>
+  <div class="decision"><div class="tick">✓</div><div><b class="lbl">Decision</b><p>Keep <b>ΔRMS, ΔZCR and ΔBER</b>. Drop Δenvelope (r = 0.98 with ΔRMS, it adds nothing new) and Δcentroid (r = 0.91 with ΔBER). The three kept features correlate only r = 0.40–0.44, so each brings different information. Our entropy hypothesis was only partly confirmed (d = 0.48, p = 0.067).</p></div></div>
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/features.png" alt="Feature comparison"><figcaption><span>Per-recording ΔRMS, ΔZCR and ΔBER, normal vs murmur.</span><code>p3_features</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 11. P3 STFT ======================= -->
+<section class="step" data-id="p3-stft" data-group="Phase 3 · Features & STFT" data-title="Tuning the spectrogram">
+  <div class="eyebrow">Phase 3 <span class="sep">/</span> Time-frequency <span class="owners"><span class="owner f">Mahmoud</span></span></div>
+  <h2>Choosing STFT settings with two numbers, not by eye</h2>
+  <p class="lead">A <span class="term" data-term="STFT">spectrogram</span> trades time detail against frequency detail. We scored every window type, length and overlap with two measures: <b>S1 timing error</b> (how precisely S1 shows up in time) and <b>murmur separation d</b> (how well systolic energy separates murmur from normal). Change the settings and watch the spectrogram respond.</p>
+
+  <div class="card">
+    <div class="controls">
+      <label class="ctrl">Recording<div class="row"><select id="stRec"></select></div></label>
+      <label class="ctrl">Window type<div class="row"><span class="seg" id="stW"><button data-v="rect">Rectangular</button><button data-v="hann">Hann</button><button data-v="hamming">Hamming</button><button data-v="blackman" class="on">Blackman</button></span></div></label>
+      <label class="ctrl">Length<div class="row"><span class="seg" id="stL"><button data-v="64">64</button><button data-v="128">128</button><button data-v="256" class="on">256</button><button data-v="512">512</button></span></div></label>
+      <label class="ctrl">Overlap<div class="row"><span class="seg" id="stO"><button data-v="0.5">50%</button><button data-v="0.75" class="on">75%</button><button data-v="0.9">90%</button></span></div></label>
+    </div>
+    <canvas class="wave-canvas" id="stCanvas" style="height:280px"></canvas>
+    <div class="flex mt8 small"><span class="muted" id="stInfo"></span></div>
+    <div class="plain" id="stVerdict"></div>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We picked Blackman, 256 samples, 75% overlap because it gave the best murmur separation (d = 0.99) with a low S1 timing error (9.0 ms). Rectangular windows leak, and 512 samples smear S1 and S2.</p></div>
+
+  <h3>What we measured</h3>
+  <table class="data">
+    <thead><tr><th>Setting compared</th><th>Result</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Window type at 256 samples</td><td>Rectangular 14.6 ms error vs ≈ 9 ms for tapered windows</td><td>Rectangular leaks energy and smears S1 in time</td></tr>
+      <tr><td>Blackman length 64 → 512</td><td>Timing error 5.5 → 12.4 ms; d drops to 0.84 at 512</td><td>Long windows blur the short heart sounds</td></tr>
+      <tr><td>Overlap 50% → 75%</td><td>d 0.91 → 0.99; error 12.5 → 9.0 ms</td><td>Clear gain for both measures</td></tr>
+      <tr><td>Overlap 75% → 90%</td><td>Error 7.4 ms but 2.5× more frames, no gain in d</td><td>Not worth the cost</td></tr>
+    </tbody>
+  </table>
+  <div class="decision"><div class="tick">✓</div><div><b class="lbl">Decision</b><p><b>Blackman, 256 samples (64 ms, 15.6 Hz resolution), 75% overlap</b>: timing error 9.0 ms, murmur separation d = 0.99.</p></div></div>
+  <details class="evidence"><summary>See our MATLAB figures</summary>
+    <figure class="fig"><img src="figures/stft_sweep.png" alt="STFT sweep"><figcaption><span>S1 timing error and murmur separation for each window type and length.</span><code>p3_stft_settings</code></figcaption></figure>
+    <figure class="fig"><img src="figures/stft.png" alt="Spectrograms"><figcaption><span>Spectrograms of a normal and a murmur recording with the chosen settings.</span><code>p3_stft_settings</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 12. P4 SCORE ======================= -->
+<section class="step" data-id="p4-score" data-group="Phase 4 · Murmur detection" data-title="Building the detector">
+  <div class="eyebrow">Phase 4 <span class="sep">/</span> Detector design <span class="owners"><span class="owner s">Sotohy</span></span></div>
+  <h2>From one heartbeat to one decision</h2>
+  <p class="lead">Our detector has two layers. First, each cardiac cycle gets a <b>murmur score</b>. Then the whole recording is judged by a <b>vote</b> over its cycles. Follow the four steps, then move the threshold.</p>
+
+  <div class="grid g4">
+    <div class="card"><div class="pn eyebrow">1 · Measure</div><p class="small mt8">For every complete cycle, compute ΔRMS, ΔZCR and ΔBER (systole minus diastole).</p></div>
+    <div class="card"><div class="pn eyebrow">2 · Standardise</div><p class="small mt8">Turn each feature into a <span class="term" data-term="z-score">z-score</span> against the 550 normal development cycles.</p></div>
+    <div class="card"><div class="pn eyebrow">3 · Score</div><p class="small mt8">Cycle score = mean of the chosen z-scores. Flag the cycle if score &gt; <b>T</b>.</p></div>
+    <div class="card"><div class="pn eyebrow">4 · Vote</div><p class="small mt8">Recording = murmur if at least a fraction <b>frac</b> of its cycles are flagged.</p></div>
+  </div>
+
+  <h3>Cycle scores on the development set <small>550 normal vs 811 murmur cycles</small></h3>
+  <div class="card">
+    <div class="controls">
+      <label class="ctrl">Features in the score<div class="row" id="scFeat"><label class="chk"><input type="checkbox" value="0" checked>ΔRMS</label><label class="chk"><input type="checkbox" value="1" checked>ΔZCR</label><label class="chk"><input type="checkbox" value="2" checked>ΔBER</label></div></label>
+      <label class="ctrl">Threshold T<div class="row"><input type="range" id="scT" min="-1" max="3" step="0.05" value="0.5"><span class="val" id="scTV">0.50</span></div></label>
+    </div>
+    <div id="scHist"></div>
+    <div class="legend"><span><i style="background:var(--c-normal)"></i>Cycles of normal recordings</span><span><i style="background:var(--c-murmur)"></i>Cycles of murmur recordings</span></div>
+    <div class="metrics mt16" id="scStats"></div>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We vote over many cycles because single-cycle scores overlap (d = 0.98): one heartbeat is unreliable, but most heartbeats agreeing is not. z-scores against normal cycles put every feature on the same scale.</p></div>
+  <div class="plain"><b>What this shows</b>The two groups overlap a lot. One cycle is not enough to decide (cycle-level effect sizes: ΔRMS d = 0.93, ΔZCR 0.68, ΔBER 0.66; all three combined d = 0.98). That is why the final decision is a vote over many cycles: random mistakes on single beats cancel out.</div>
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/score_hist.png" alt="Score histogram"><figcaption><span>Cycle murmur score distribution (all three features).</span><code>p4_detector</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 13. P4 PARAMS ======================= -->
+<section class="step" data-id="p4-params" data-group="Phase 4 · Murmur detection" data-title="Parameter study & lab">
+  <div class="eyebrow">Phase 4 <span class="sep">/</span> Parameter study <span class="owners"><span class="owner s">Sotohy</span></span></div>
+  <h2>Choosing features, T and frac, then trying them yourself</h2>
+  <p class="lead">We tested 3 preprocessing options (raw, FIR, IIR) × 7 feature combinations × 9 thresholds × 3 voting fractions. Features were chosen by cycle-level <span class="term" data-term="AUC">AUC</span>, because recording accuracy jumps in 3.3% steps on 60 recordings. T and frac were then chosen by best <span class="term" data-term="Balanced accuracy">balanced accuracy</span>.</p>
+
+  <div class="grid g2">
+    <div class="card"><b>Cycle AUC with our FIR, per feature set</b><div id="aucChart"></div><p class="small muted">Computed live from our cycle features (development set).</p></div>
+    <div class="card"><b>What the full study found</b>
+      <ul class="clean small">
+        <li><b>ΔZCR needs filtering:</b> AUC 0.51 on raw signals (useless), 0.70 with FIR, 0.72 with IIR.</li>
+        <li><b>Two features beat three:</b> ΔRMS + ΔZCR reaches 0.780 (FIR) / 0.793 (IIR); all three 0.764 (FIR).</li>
+        <li><b>IIR only marginally better</b>, so we kept the FIR chosen in Phase 2.</li>
+        <li><b>Best of these:</b> ΔRMS + ΔZCR. The next step shows what whole-systole features miss, and step 15 the three features that make up our final detector.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We chose features by cycle AUC because it uses 1,361 cycles instead of 60 recordings (where one recording is 3.3%) and does not depend on a threshold. T and frac were then chosen by balanced accuracy, which weighs catching murmurs and passing normals equally.</p></div>
+
+  <h3>Detector lab <small>runs our exact detector on our real cycle features</small></h3>
+  <div class="card">
+    <div class="controls">
+      <label class="ctrl">Data<div class="row"><span class="seg" id="labSet"><button data-v="dev" class="on">Development (60)</button><button data-v="test">Test (100)</button><button data-v="loc">All locations (213)</button></span></div></label>
+      <label class="ctrl">Features<div class="row" id="labFeat" style="flex-wrap:wrap"><label class="chk"><input type="checkbox" value="0">ΔRMS</label><label class="chk"><input type="checkbox" value="1">ΔZCR</label><label class="chk"><input type="checkbox" value="2">ΔBER</label><label class="chk"><input type="checkbox" value="3" checked>Early third</label><label class="chk"><input type="checkbox" value="4" checked>Loudest third</label><label class="chk"><input type="checkbox" value="5" checked>Steady envelope</label></div></label>
+      <label class="ctrl">Threshold T<div class="row"><input type="range" id="labT" min="-0.5" max="2" step="0.05" value="0"><span class="val" id="labTV">0.00</span></div></label>
+      <label class="ctrl">Vote fraction<div class="row"><span class="seg" id="labF"><button data-v="0.25">0.25</button><button data-v="0.5">0.50</button><button data-v="0.65" class="on">0.65</button><button data-v="0.75">0.75</button></span></div></label>
+      <button class="btn btn-ghost" id="labReset" style="padding:7px 14px">Reset to our detector</button>
+    </div>
+    <div class="grid g-side">
+      <div>
+        <b class="small">Every recording <span class="muted">(filled = correct, outlined = wrong; click one)</span></b>
+        <div class="tiles mt8" id="labTiles"></div>
+        <div class="legend"><span><i style="background:var(--c-murmur)"></i>Murmur</span><span><i style="background:var(--c-normal)"></i>Normal</span><span id="labNaLeg" style="display:none"><i style="background:#9AA5B5"></i>Murmur not audible here</span></div>
+        <div class="card mt16" id="labRecDetail" style="box-shadow:none;background:var(--bg)"><span class="muted small">Click a square to see that recording's cycle scores and how its vote went.</span></div>
+      </div>
+      <div>
+        <b class="small">Recordings</b>
+        <div class="flex mt8" style="align-items:flex-start;gap:20px"><div class="cm" id="labCM"></div></div>
+        <div class="metrics mt16" id="labM"></div>
+        <b class="small" style="display:block;margin-top:14px">Single cycles (before the vote)</b>
+        <div class="metrics mt8" id="labMC"></div>
+      </div>
+    </div>
+  </div>
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/p4_params.png" alt="Parameter study"><figcaption><span>Left: cycle AUC for raw, FIR and IIR and all feature sets. Right: sensitivity and specificity vs T.</span><code>p4_parameter_study</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 14. P4 REGIONS ======================= -->
+<section class="step" data-id="p4-regions" data-group="Phase 4 · Murmur detection" data-title="Where murmurs sit">
+  <div class="eyebrow">Phase 4 <span class="sep">/</span> Cardiac regions <span class="owners"><span class="owner f">Mahmoud</span></span></div>
+  <h2>Where in the beat does the murmur sit?</h2>
+  <p class="lead">We split systole into thirds (early, mid, late) and measured each third's loudness relative to diastole.</p>
+
+  <h3>Systole thirds, RMS minus diastole RMS (dB) <small>160 main recordings</small></h3>
+  <div class="card"><div id="regChart"></div>
+    <div class="legend"><span><i style="background:#9AA5B5"></i>Normal (80)</span><span><i style="background:var(--c-third)"></i>Early-systolic (22)</span><span><i style="background:var(--c-normal)"></i>Mid-systolic (11)</span><span><i style="background:var(--c-murmur)"></i>Holosystolic (47)</span></div>
+  </div>
+  <div class="plain"><b>The explanation we found</b>Early-systolic murmurs raise only the <b>first third</b> of systole (+3.46 dB), then fade. Features that average over the whole systole dilute a short murmur like this. So the final detector measures the early and the loudest third of systole separately (next step).</div>
+
+  <details class="evidence"><summary>See our MATLAB figures</summary>
+    <figure class="fig"><img src="figures/p4_regions.png" alt="Regions"><figcaption><span>Systole thirds by murmur timing.</span><code>p4_regions</code></figcaption></figure>
+      </details>
+</section>
+
+<!-- ======================= 15. FINAL FEATURES ======================= -->
+<section class="step" data-id="p4-final" data-group="Phase 4 · Murmur detection" data-title="Final features">
+  <div class="eyebrow">Phase 4 <span class="sep">/</span> Final features <span class="owners"><span class="owner s">Sotohy</span></span></div>
+  <h2>Three features that also catch short murmurs</h2>
+  <p class="lead">The region analysis showed that early-systolic murmurs raise only the first third of systole. So we measured six new features per cycle and chose among them with the same method as before: <b>cycle-level AUC</b> on the development set, then T and frac by development balanced accuracy. Nothing was tuned on the test set.</p>
+  <div class="grid g3">
+    <div class="card"><b>Early-third ΔRMS</b><p class="small">Loudness of the first third of systole against diastole, so an early murmur is not averaged away.</p></div>
+    <div class="card"><b>Loudest-third ΔRMS</b><p class="small">Whichever third of systole is loudest, so a murmur is caught wherever it sits in systole.</p></div>
+    <div class="card"><b>Steady envelope</b><p class="small">Envelope variation of systole minus diastole. A murmur fills systole with steady sound; clicks and noise make it spiky. Lower means more murmur-like, so its sign is flipped.</p></div>
+  </div>
+
+  <h3>Cycle-level AUC <small>development cycles, computed live</small></h3>
+  <div class="card"><div id="impAuc"></div><p class="small muted">Also tested and not chosen: Δ spectral centroid, Δ entropy and Δ spectral flux.</p></div>
+  <div class="why"><p><b>Why we picked this:</b> We added early-third and loudest-third ΔRMS because early-systolic murmurs only raise the first third of systole and get diluted in a whole-systole average. Steady envelope separates a continuous murmur from clicks and noise. Together they reach cycle AUC 0.840.</p></div>
+
+  <div class="grid g3 mt16">
+    <div class="stat accent"><div class="v">0.840</div><div class="k">Cycle AUC of the three features together (development)</div></div>
+    <div class="stat"><div class="v">0.883</div><div class="k">Development balanced accuracy with T = 0.00 and frac = 0.65</div></div>
+    <div class="stat red"><div class="v">0.889</div><div class="k">Cross-validated balanced accuracy (5-fold × 20 repeats, all 160 patients, ± 0.013)</div></div>
+  </div>
+
+  <div class="plain"><b>How we avoided fooling ourselves</b>We searched 168,000 combinations of features, rules and thresholds. Picking the one with the best development score would have been luck: nine setups tied at 0.917 on development but scored anywhere from 0.72 to 0.88 on test. So we kept our rule (features chosen by cycle AUC, which uses 1,361 cycles, not 60 recordings) and confirmed the choice with cross-validation over all 160 patients.</div>
+  <div class="decision"><div class="tick">✓</div><div><b class="lbl">Decision</b><p>Final detector: <b>early-third ΔRMS, loudest-third ΔRMS and steady envelope</b>, cycle flagged if its score is above <b>T = 0.00</b>, recording is a murmur if at least <b>65%</b> of its cycles are flagged. Frozen here, then run once on the test set (next step). It runs in <code>demoGUI</code> and in <a href="#test-own" data-own="open">Test your own</a>.</p></div></div>
+</section>
+
+<!-- ======================= 16. P4 TEST ======================= -->
+<section class="step" data-id="p4-test" data-group="Phase 4 · Murmur detection" data-title="The one-shot test">
+  <div class="eyebrow">Phase 4 <span class="sep">/</span> Test-set evaluation and locations <span class="owners"><span class="owner f">Mahmoud</span></span></div>
+  <h2>Opening the sealed test set, once</h2>
+  <p class="lead">With every parameter frozen, we ran the detector on 100 recordings from 100 new patients (50 murmur, 50 normal) that had never been used for any decision. If the test numbers are close to the development numbers, the design did not overfit.</p>
+  <div class="grid g2">
+    <div class="card">
+      <div class="controls"><span class="seg" id="tSet"><button data-v="dev">Development</button><button data-v="test" class="on">Test</button></span></div>
+      <div class="cm" id="tCM"></div>
+      <div class="metrics mt16" id="tM"></div>
+    </div>
+    <div class="card"><b>Development vs test</b><div id="tCompare"></div>
+      <p class="small muted">Balanced accuracy 0.883 on development and 0.880 on test. No sign of overfitting.</p></div>
+  </div>
+
+  <h3>Which murmurs did we miss? <small>test set, detected / total</small></h3>
+  <div class="grid g2">
+    <div class="card"><b>By grade (loudness)</b><div id="tGrade"></div></div>
+    <div class="card"><b>By timing in systole</b><div id="tTiming"></div></div>
+  </div>
+  <div class="plain"><b>Reading this</b>Every grade II/VI and III/VI murmur was caught (5/5, 14/14), and 27 of 28 holosystolic ones. Early-systolic murmurs, the hardest type, were caught 11 times out of 14. The 5 misses are all faint grade I/VI murmurs (26/31 caught).</div>
+  <h3>By auscultation location <small>213 recordings of the development patients</small></h3>
+  <div class="card"><div id="locChart"></div>
+    <div class="legend"><span><i style="background:var(--c-murmur)"></i>Sensitivity</span><span><i style="background:var(--c-normal)"></i>Specificity</span></div>
+    <p class="small muted">Recordings per location (murmur audible / normal): AV 19 / 26, PV 18 / 28, TV 21 / 27, MV 27 / 30. Where the murmur is <b>not</b> audible, the detector raised an alarm in 4 of 17 recordings. Overall: sensitivity 0.882 (85), specificity 0.811 (111).</p>
+  </div>
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/p4_locations.png" alt="Locations"><figcaption><span>Detection by grade, timing and location (MATLAB figure from the first feature set).</span><code>p4_evaluate</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 16. P5 EVALUATION ======================= -->
+<section class="step" data-id="p5-eval" data-group="Phase 5 · Evaluation" data-title="Full evaluation">
+  <div class="eyebrow">Phase 5 <span class="sep">/</span> Quantitative evaluation <span class="owners"><span class="owner s">Sotohy: overall measures</span><span class="owner f">Mahmoud: locations</span></span></div>
+  <h2>All the numbers in one place</h2>
+  <p class="lead">Both detectors scored against the expert annotations, on development and test. Switch between the detectors, or read the full table underneath.</p>
+
+  <div class="card">
+    <div class="controls">
+      <span class="seg" id="evDet"><button data-v="0">S1/S2 detector</button><button data-v="1" class="on">Murmur, per recording</button><button data-v="2">Murmur, per cycle</button></span>
+    </div>
+    <div id="evChart"></div>
+    <div class="legend"><span><i style="background:var(--c-normal)"></i>Development</span><span><i style="background:var(--c-murmur)"></i>Test</span></div>
+  </div>
+
+  <table class="data mt16" id="evTable">
+    <thead><tr><th>Detector</th><th>Set</th><th class="n">Sens.</th><th class="n">Spec.</th><th class="n">Prec.</th><th class="n">F1</th><th class="n">FPR</th><th class="n">FNR</th><th class="n">Bal. acc.</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <p class="note">S1/S2 timing error: 19.6 ± 11.7 ms (development), 18.7 ± 11.7 ms (test). Cycle confusion counts (T = 0.00): development TP 725, FN 86, TN 270, FP 280; test TP 1072, FN 105, TN 598, FP 521. Single cycles flag many normal beats; the 65% vote is what removes these false alarms.</p>
+
+  <h3>Do features behave the same at every location? <small>effect size d, murmur-audible vs normal</small></h3>
+  <div class="card"><div id="p5Loc"></div>
+    <div class="legend"><span><i style="background:var(--c-murmur)"></i>ΔRMS</span><span><i style="background:var(--c-normal)"></i>ΔZCR</span><span><i style="background:var(--c-third)"></i>ΔBER</span></div>
+    <p class="small muted">S1/S2 F1 per location: AV 0.592, PV 0.749, TV 0.764, MV 0.684. AV is the hardest place to segment.</p>
+  </div>
+
+  <h3>Observed, measured, concluded <small>as the brief asked</small></h3>
+  <div class="controls"><span class="seg" id="omcTab"></span></div>
+  <div class="omc" id="omcBox"></div>
+
+  <details class="evidence"><summary>See our MATLAB figure</summary>
+    <figure class="fig"><img src="figures/p5_locations.png" alt="Location analysis"><figcaption><span>Feature effect sizes and S1/S2 F1 per location.</span><code>p5_locations</code></figcaption></figure>
+  </details>
+</section>
+
+<!-- ======================= 17. P6 GUI ======================= -->
+<section class="step" data-id="p6-gui" data-group="Phase 6 · GUI & report" data-title="demoGUI">
+  <div class="eyebrow">Phase 6 <span class="sep">/</span> Visualisation <span class="owners"><span class="owner s">Sotohy</span><span class="owner f">Mahmoud</span></span></div>
+  <h2>demoGUI: the whole pipeline on one screen</h2>
+  <p class="lead">A MATLAB app (uifigure, R2020b+) that lets anyone pick a recording and see every stage of our pipeline next to the reference annotations. Click the parts of the layout below to see what each one shows.</p>
+  <div class="grid g-side">
+    <div class="gui" id="gui"></div>
+    <div class="card" id="guiDetail"></div>
+  </div>
+  <div class="why"><p><b>Why we picked this:</b> We built demoGUI on the same code and saved reference as our scripts, so every number on screen matches this site. Three large tabs replaced a first version that was too cluttered.</p></div>
+  <h3>Brief requirements covered</h3>
+  <table class="data" id="guiReq"><thead><tr><th>The brief asks the GUI to…</th><th>Where in demoGUI</th></tr></thead><tbody></tbody></table>
+  <p class="note">Run it with <code>demoGUI</code>: the same app running our final detector (step 15). It builds its normal reference on the first run and saves it as <code>demo_ref.mat</code>.</p>
+</section>
+
+<!-- ======================= 21. WRAP-UP ======================= -->
+<section class="step" data-id="wrap" data-group="Wrap-up" data-title="Limits, team & code">
+  <div class="eyebrow">Wrap-up</div>
+  <h2>What we achieved, what we could not, and who did what</h2>
+  <div class="grid g2">
+    <div class="card"><b>What we can claim</b>
+      <ul class="clean">
+        <li>A pure-DSP pipeline with every parameter chosen by a measurement.</li>
+        <li>It generalises: balanced accuracy 0.880 on test, 0.883 on development, 0.889 cross-validated.</li>
+        <li>Voting over cycles turns a moderate cycle detector (bal. acc. 0.72) into a reliable recording detector (0.88).</li>
+        <li>It catches 9 in 10 murmurs (45/50), including 11 of 14 short early-systolic ones.</li>
+      </ul></div>
+    <div class="card"><b>Limitations we state openly</b>
+      <ul class="clean">
+        <li>About 1 in 7 normal recordings is flagged (7/50), and 5 faint grade I murmurs are missed.</li>
+        <li>The murmur detector uses the annotated cycle boundaries (our S1/S2 detector reaches F1 0.72–0.75).</li>
+        <li>Small development set: one recording = 3.3%. The test set reduces but does not remove this.</li>
+        <li>The location analysis includes the development recordings, and some groups are small.</li>
+        <li>Only systolic murmurs were studied; regions are per cycle, not exact start/end times.</li>
+      </ul></div>
+  </div>
+  <div class="decision"><div class="tick">→</div><div><b class="lbl">Next step</b><p>Automatic segmentation good enough to replace the annotations, so the detector can run on any recording without them.</p></div></div>
+
+  <h3>Who did what</h3>
+  <table class="data">
+    <thead><tr><th>Phase</th><th>Sotohy</th><th>Mahmoud</th></tr></thead>
+    <tbody>
+      <tr><td>1 Background & design</td><td>DSP pipeline design and block diagram; annotation and dataset analysis</td><td>Background study: PCG characteristics, murmurs, noise sources, literature review</td></tr>
+      <tr><td>2 Preprocessing</td><td>FIR vs IIR design and selection; S1/S2 detector and its evaluation</td><td>Raw signal and noise inspection (PSD); cutoff and order sweep</td></tr>
+      <tr><td>3 Features</td><td>Time and frequency features, statistics and feature selection</td><td>STFT window type, length and overlap study</td></tr>
+      <tr><td>4 Murmur detection</td><td>Detector design and parameter study</td><td>Test-set evaluation, auscultation locations and cardiac-cycle regions</td></tr>
+      <tr><td>5 Evaluation</td><td>Overall evaluation with all performance measures</td><td>Signal characteristics across auscultation locations</td></tr>
+      <tr><td>6 GUI & report</td><td colspan="2">Shared by both members</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Code map <small>MATLAB run order</small></h3>
+  <table class="data code-map">
+    <thead><tr><th>Script</th><th>Produces</th><th>Step on this site</th></tr></thead>
+    <tbody id="codeMap"></tbody>
+  </table>
+  <p class="note">Recording selection was done in Python: <code>select_patients.py</code> (seed 42) and <code>select_extra.py</code> (seed 2026). Helper functions: loadPCG, segMask, firBandpass, iirBandpass, pcgFilter, filterScores, detectS1S2, scoreS1S2, effectSize, stftPower, stftScores, cycleFeatures, murmurScore, detectMurmur, cycleAUC.</p>
+
+  <h3>References</h3>
+  <ol class="small">
+    <li>CirCor DigiScope Phonocardiogram Dataset v1.0.3, PhysioNet.</li>
+    <li>J. Oliveira et al., "The CirCor DigiScope Dataset: From Murmur Detection to Murmur Classification," IEEE JBHI, 2022.</li>
+    <li>D. B. Springer, L. Tarassenko, G. D. Clifford, "Logistic Regression-HSMM-Based Heart Sound Segmentation," IEEE TBME, 2016.</li>
+    <li>A. Patwa et al., arXiv:2303.11423, 2023.</li>
+  </ol>
+  <div class="flex mt24"><button class="btn btn-red" data-goto="welcome">↺ Back to the start</button></div>
+  <p class="note">About this site: the labs run in your browser on our recordings and on per-cycle features exported from our pipeline. A Python re-run of the pipeline reproduces the MATLAB results exactly (550 / 811 cycles; development 21/30 murmurs and 29/30 normals; test TP 34, FN 16, TN 46, FP 4; S1/S2 F1 72.4%).</p>
+</section>
+
+</main>
+
+<!-- ======================= TEST YOUR OWN (separate view) ======================= -->
+<section class="own" id="own" hidden aria-label="Test your own recording">
+  <div class="own-inner">
+    <div class="flex" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="eyebrow">Live detector <span class="sep">/</span> Runs in your browser</div>
+      <button class="btn btn-ghost" data-own="close">← Back to the walkthrough</button>
+    </div>
+    <h2>Test your own recording</h2>
+    <p class="lead">Load a phonocardiogram and our detector runs on it (early-third ΔRMS, loudest-third ΔRMS, steady envelope). The filter, features and thresholds are the same as our MATLAB code, and on our 100 test patients this page gives exactly our results.</p>
+
+    <div class="card">
+      <div class="own-inputs">
+        <label class="own-drop" id="ownDrop" for="ownFile">
+          <input id="ownFile" type="file" accept=".wav,.tsv,.txt,audio/wav" multiple>
+          <b>Choose or drop a .wav file, plus its .tsv annotation if you have one</b>
+          <span class="small muted">Any sample rate (resampled to 4 kHz). Nothing is uploaded; the file stays on your computer.</span>
+        </label>
+        <div><div class="small muted" style="margin-bottom:6px">Or try a CirCor recording:</div><span class="seg" id="ownEx"></span></div>
+      </div>
+      <p class="own-status" id="ownStatus" aria-live="polite">Loading an example…</p>
+      <div class="own-warn" id="ownWarn" hidden><b>No annotation file.</b> Heartbeats were found with our automatic S1/S2 detector (F1 about 0.72), so some cycles may be wrong. For results that match our report, add the recording's .tsv file.</div>
+    </div>
+
+    <div class="mt16">
+      <div class="verdict" id="ownImp"><div class="tag">Our detector · cycle flagged if score &gt; 0.00 · murmur if ≥ 65% of cycles flagged</div><div class="call">–</div><div class="vbar"><i></i><s></s></div><div class="small muted detail">–</div></div>
+    </div>
+
+    <div class="card mt16">
+      <div class="controls">
+        <button class="btn btn-ghost" id="ownPlay" type="button">▶ Play</button>
+        <span class="seg" id="ownView"><button data-v="10" class="on">10 s window</button><button data-v="all">Whole recording</button></span>
+        <label class="small muted" for="ownPos">Scroll <input type="range" id="ownPos" min="0" max="1" step="0.001" value="0"></label>
+      </div>
+      <canvas class="own-plot" id="ownWave" height="230" aria-label="Filtered signal with segments, detected heart sounds and flagged systoles"></canvas>
+      <div class="legend"><span><i style="background:var(--a-s1)"></i>S1</span><span><i style="background:var(--a-sys)"></i>Systole</span><span><i style="background:var(--a-s2)"></i>S2</span><span><i style="background:var(--a-dia)"></i>Diastole</span><span><i style="background:rgba(224,161,0,.55)"></i>Flagged systole</span><span><i class="line" style="background:#1E7B34"></i>Envelope</span><span><i style="background:var(--c-murmur)"></i>Detected S1</span><span><i style="background:var(--c-normal)"></i>Detected S2</span></div>
+      <canvas class="own-plot mt16" id="ownScore" height="200" aria-label="Murmur score of every cycle"></canvas>
+      <div class="legend"><span><i style="background:var(--c-murmur)"></i>Flagged cycle</span><span><i style="background:var(--c-normal)"></i>Not flagged</span><span><i class="line" style="background:var(--navy)"></i>Threshold T = 0 (dashed)</span></div>
+    </div>
+
+    <div class="grid g2 mt16">
+      <div class="card"><b>Feature z-scores for this recording</b>
+        <table class="data mt16" id="ownZ"><thead><tr><th>Feature (systole − diastole)</th><th class="n">z vs normal</th></tr></thead><tbody></tbody></table>
+        <p class="small muted">0 is a typical normal heart; positive is more murmur-like.</p></div>
+      <div class="card"><b>How the decision is made</b>
+        <ul class="clean small">
+          <li>Filter: FIR, order 400, 25–500 Hz, delay removed.</li>
+          <li>Cycles: complete S1 → systole → S2 → diastole from the annotation file (or the automatic detector).</li>
+          <li>Each cycle's score is the mean z-score of its features against normal development cycles.</li>
+          <li>A cycle is flagged if its score is above 0.00; the recording is a murmur if at least 65% of its cycles are flagged.</li>
+          <li>This is a course project, not a medical device.</li>
+        </ul></div>
+    </div>
+  </div>
+</section>
+
+<footer class="stepnav">
+  <button class="btn btn-ghost" id="prevBtn">← Back</button>
+  <div class="right">
+    <div class="nxt-title" id="nextTitle"></div>
+    <button class="btn btn-red" id="nextBtn">Next →</button>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox"><img alt=""></div>
+<div class="pop" id="pop"></div>
+
+<script src="data/recordings.js"></script>
+<script src="data/cycles.js"></script>
+<script src="data/s1s2grid.js"></script>
+<script src="js/dsp.js"></script>
+<script src="js/charts.js"></script>
+<script src="data/improved.js"></script>
+<script src="js/app.js"></script>
+<script src="data/examples.js"></script>
+<script src="js/pcgdetect.js"></script>
+<script src="js/owntest.js"></script>
+</body>
+</html>
